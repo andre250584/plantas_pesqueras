@@ -249,7 +249,7 @@ footer{margin-top:34px;text-align:center;font-size:11.5px;color:var(--muted)}
     <!-- TABLA -->
     <section class="view" id="v-tbl">
       <div class="tbar">
-        <input class="search" id="search" placeholder="Buscar por razón social, distrito, resolución…">
+        <input class="search" id="search" placeholder="Buscar por razón social, departamento, provincia, distrito, actividad, estado o resolución…">
         <span class="tcount" id="tcount"></span>
       </div>
       <div class="tscroll">
@@ -661,7 +661,7 @@ $$('#tbl thead th').forEach(th=>th.onclick=()=>{const k=th.dataset.k;sortDir=(so
 function fillTable(){
   let rows=filtered();
   const q=norm(state.q);
-  if(q) rows=rows.filter(r=>norm(r.razon).includes(q)||norm(r.dist).includes(q)||norm(r.res).includes(q)||norm(r.dep).includes(q));
+  if(q) rows=rows.filter(r=>norm(r.razon).includes(q)||norm(r.dep).includes(q)||norm(r.prov).includes(q)||norm(r.dist).includes(q)||norm(r.act).includes(q)||norm(r.est).includes(q)||norm(r.res).includes(q));
   if(sortK){const map={razon:'razon',dep:'dep',dist:'dist',act:'act',cap:'cap',est:'est',res:'res',fec:'year'};
     const k=map[sortK];rows=[...rows].sort((a,b)=>{let x=a[k],y=b[k];if(typeof x==='number'||k==='cap'||k==='year'){return((x||0)-(y||0))*sortDir;}return String(x||'').localeCompare(String(y||''))*sortDir;});}
   const badge=e=>{const cl=e==='VIGENTE'?'b-vig':e.includes('SUSPEND')?'b-sus':'b-can';return `<span class="badge ${cl}">${e||'—'}</span>`;};
