@@ -367,7 +367,7 @@ function parseRegistry(rows){
   const loc=locate(rows,['RAZON SOCIAL','ESTADO']); if(!loc) return [];
   const c={razon:colOf(loc,'RAZON SOCIAL'),doc:colOf(loc,'DOCUMENTO'),dep:colOf(loc,'DEPARTAMENTO'),
     prov:colOf(loc,'PROVINCIA'),dist:colOf(loc,'DISTRITO'),res:colOf(loc,'RESOLUCION'),
-    fec:colOf(loc,'FECHA LICENCIA','FECHA'),capn:colOf(loc,'CAPACIDAD EN'),
+    fec:colOf(loc,'FECHA LICENCIA','FECHA'),felim:colOf(loc,'ELIMINAC'),capn:colOf(loc,'CAPACIDAD EN'),
     capr:colOf(loc,'CAPACIDAD'),est:colOf(loc,'ESTADO'),act:colOf(loc,'ACTIVIDAD'),sub:colOf(loc,'SUBACTIVIDAD')};
   const out=[];
   for(let i=loc.row+1;i<rows.length;i++){
@@ -381,7 +381,7 @@ function parseRegistry(rows){
       razon:String(razon).trim(),
       doc:r[c.doc]!=null?String(r[c.doc]).trim():'',
       dep:dep, prov:r[c.prov]||'', dist:r[c.dist]||'',
-      res:r[c.res]||'', fec:r[c.fec], year:yearOf(r[c.fec]),
+      res:r[c.res]||'', fec:r[c.fec], year:yearOf(r[c.fec]), yearBaja:(c.felim>=0?yearOf(r[c.felim]):null),
       capRaw:r[c.capr]||'', cap:toNum(c.capn>=0?r[c.capn]:r[c.capr]),
       est:norm(r[c.est]), act:act, sub:norm(r[c.sub])
     });
@@ -547,7 +547,7 @@ function renderAll(){
 
   // dinamica
   const altas=tally(RAW.matriz.filter(r=>r.year),'year');
-  const bajas=tally(RAW.elim.filter(r=>r.year),'year');
+  const bajas=tally(RAW.elim.filter(r=>r.yearBaja),'yearBaja');
   const allYears=uniqSorted([...Object.keys(altas),...Object.keys(bajas)].map(Number)).map(Number);
   const aData=allYears.map(y=>altas[y]||0), bData=allYears.map(y=>-(bajas[y]||0));
   mk('cFlow',{type:'bar',data:{labels:allYears,datasets:[
@@ -557,8 +557,8 @@ function renderAll(){
   mk('cNet',{type:'line',data:{labels:allYears,datasets:[{label:'Licencias acumuladas',data:net,
     borderColor:'#0E7490',backgroundColor:'rgba(14,116,144,.12)',fill:true,tension:.3,borderWidth:2,pointRadius:0}]},
     options:baseOpts({plugins:{legend:{display:false}}})});
-  const tA=RAW.matriz.length, tB=RAW.elim.length;
-  $('#dynNote').textContent=`Altas calculadas según la fecha de licencia de las ${fmt(tA)} plantas del padrón; bajas según las ${fmt(tB)} licencias de la hoja de eliminadas. Si una hoja tiene pocos registros, el flujo se verá disperso — refleja el dato disponible.`;
+  const tA=RAW.matriz.length, tB=RAW.elim.filter(r=>r.yearBaja).length;
+  $('#dynNote').textContent=`Altas calculadas según la fecha de licencia de las ${fmt(tA)} plantas del padrón; bajas según la fecha de eliminación registrada en la hoja de eliminadas (${fmt(tB)} con fecha de eliminación). Las filas sin fecha de eliminación aún no se contabilizan como baja.`;
 
   renderMapTab();
 }
