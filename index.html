@@ -9,6 +9,8 @@
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <style>
 :root{
   --rojo:#C8102E; --rojo-d:#9d0c24;
@@ -134,6 +136,26 @@ footer{margin-top:34px;text-align:center;font-size:11.5px;color:var(--muted)}
 .hidden{display:none!important}
 .note{font-size:11px;color:var(--muted);margin-top:10px;padding:9px 12px;background:color-mix(in srgb,var(--amber) 8%,transparent);border-radius:8px;border-left:3px solid var(--amber)}
 @media(max-width:860px){.kpis{grid-template-columns:repeat(2,1fr)}.grid2{grid-template-columns:1fr}.grid3{grid-template-columns:1fr}}
+/* reportes */
+.rgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px 14px;margin:14px 0 16px}
+.rfld{display:flex;flex-direction:column;gap:5px}
+.rfld label{font-size:10.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
+.rfld select{appearance:none;background:var(--panel);border:1px solid var(--line);color:var(--ink);
+  border-radius:9px;padding:9px 30px 9px 11px;font:500 13px Inter;cursor:pointer;
+  background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);
+  background-position:calc(100% - 16px) 51%,calc(100% - 11px) 51%;background-size:5px 5px,5px 5px;background-repeat:no-repeat}
+.rfld select:focus{outline:2px solid color-mix(in srgb,var(--rojo) 45%,transparent);outline-offset:1px;border-color:var(--rojo)}
+.rfld select:disabled{opacity:.45;cursor:not-allowed}
+.ract{display:flex;align-items:center;gap:12px;flex-wrap:wrap;border-top:1px solid var(--line);padding-top:14px}
+.rbtn{border:0;background:var(--rojo);color:#fff;border-radius:9px;padding:10px 20px;
+  font:700 13px Inter;cursor:pointer;transition:filter .12s}
+.rbtn:hover{filter:brightness(1.08)}
+.rbtn:disabled{opacity:.5;cursor:not-allowed}
+.rclear{border:1px solid var(--line);background:transparent;color:var(--muted);border-radius:9px;
+  padding:10px 15px;font:600 12.5px Inter;cursor:pointer}
+.rcount{font-size:12px;color:var(--muted)}
+.rcount b{color:var(--ink);font-weight:700;font-variant-numeric:tabular-nums}
+.rcount.zero b{color:var(--amber)}
 </style>
 </head>
 <body data-theme="light">
@@ -189,6 +211,7 @@ footer{margin-top:34px;text-align:center;font-size:11.5px;color:var(--muted)}
       <button data-v="hist">Evolución histórica</button>
       <button data-v="dyn">Dinámica del padrón</button>
       <button data-v="tbl">Detalle</button>
+      <button data-v="rep">Reportes</button>
     </div>
 
     <!-- PANORAMA -->
@@ -265,6 +288,47 @@ footer{margin-top:34px;text-align:center;font-size:11.5px;color:var(--muted)}
       </div>
     </section>
 
+    <!-- REPORTES -->
+    <section class="view" id="v-rep">
+      <div class="grid2">
+
+        <div class="panel wide">
+          <h3>Consulta de planta por tipo de procesamiento y actividad</h3>
+          <p class="sub">Listado de plantas según los criterios elegidos. Estos filtros son independientes de los de la barra superior.</p>
+          <div class="rgrid">
+            <div class="rfld"><label for="q1Act">Tipo de actividad</label><select id="q1Act"></select></div>
+            <div class="rfld"><label for="q1Sub">Sub actividad</label><select id="q1Sub"></select></div>
+            <div class="rfld"><label for="q1Est">Estado licencia</label><select id="q1Est"></select></div>
+            <div class="rfld"><label for="q1Dep">Departamento</label><select id="q1Dep"></select></div>
+            <div class="rfld"><label for="q1Prov">Provincia</label><select id="q1Prov"></select></div>
+            <div class="rfld"><label for="q1Dist">Distrito</label><select id="q1Dist"></select></div>
+            <div class="rfld"><label for="q1Fmt">Formato</label><select id="q1Fmt">
+              <option value="pdf">PDF</option><option value="xlsx">Excel</option></select></div>
+          </div>
+          <div class="ract">
+            <button class="rbtn" id="q1Go">Generar reporte</button>
+            <button class="rclear" id="q1Clear">Limpiar</button>
+            <span class="rcount" id="q1Count"></span>
+          </div>
+        </div>
+
+        <div class="panel wide">
+          <h3>Distribución de establecimientos industriales pesqueros según región</h3>
+          <p class="sub">Cuadro de número de plantas y capacidad instalada por región y actividad, con el detalle de otras actividades.</p>
+          <div class="rgrid">
+            <div class="rfld"><label for="q2Dep">Región</label><select id="q2Dep"></select></div>
+            <div class="rfld"><label for="q2Fmt">Formato</label><select id="q2Fmt">
+              <option value="pdf">PDF</option><option value="xlsx">Excel</option></select></div>
+          </div>
+          <div class="ract">
+            <button class="rbtn" id="q2Go">Generar reporte</button>
+            <span class="rcount" id="q2Count"></span>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
   </div>
 
   <footer>Procesamiento local en el navegador · Fuente: archivo consolidado de plantas pesqueras</footer>
@@ -279,7 +343,7 @@ const SHEET_URLS={
   elim:'https://docs.google.com/spreadsheets/d/e/2PACX-1vTwsycwh1o8ehK9LZYv5-ATwblxYecUMmGNePnhHRHVHdCGjZOdFhYuWqr2suP10VLJ8pFo2Bi2nk5v/pub?gid=1522759277&single=true&output=csv'
 };
 const PAL=['#C8102E','#0E7490','#B45309','#15803D','#6D28D9','#475569','#0891B2','#BE185D','#65A30D','#7C3AED','#EA580C','#0369A1'];
-let RAW={matriz:[],elim:[],hist:[]}, charts={}, state={dep:'',act:'',sub:'',est:'',q:''}, sortK=null, sortDir=1;
+let RAW={matriz:[],elim:[],hist:[],otras:[]}, charts={}, state={dep:'',act:'',sub:'',est:'',q:''}, sortK=null, sortDir=1;
 
 /* ---------- theme ---------- */
 const mq=window.matchMedia('(prefers-color-scheme:dark)');
@@ -312,7 +376,7 @@ function handle(f){
 }
 function showApp(){
   drop.classList.add('hidden'); $('#app').classList.remove('hidden');
-  buildFilters(); renderAll(); fillTable();
+  buildFilters(); renderAll(); fillTable(); buildRepFilters();
 }
 function dropState(mode,msg){
   const ic={loading:'⏳',upload:'📑',error:'⚠️'}[mode];
@@ -327,8 +391,8 @@ function rowsFromCsv(text){
 async function loadFromUrls(){
   const get=u=>fetch(u,{cache:'no-store'}).then(r=>{if(!r.ok)throw new Error('HTTP '+r.status);return r.text();});
   const [m,t,e]=await Promise.all([get(SHEET_URLS.matriz),get(SHEET_URLS.hist),get(SHEET_URLS.elim)]);
-  RAW.matriz=parseRegistry(rowsFromCsv(m));
-  RAW.elim=parseRegistry(rowsFromCsv(e));
+  splitRegistry(parseRegistry(rowsFromCsv(m)));
+  RAW.elim=parseRegistry(rowsFromCsv(e)).filter(r=>!r.esOtra);
   RAW.hist=parseHist(rowsFromCsv(t));
   if(!RAW.matriz.length) throw new Error('La hoja Matriz no devolvió datos');
   showApp();
@@ -376,14 +440,14 @@ function parseRegistry(rows){
     if(!razon || !norm(razon)) continue;
     let dep=norm(r[c.dep]); if(dep==='CALLAO') dep='LIMA';
     let act=norm(r[c.act])||'SIN DATO';
-    if(act==='OTRAS') continue; // el dashboard no considera "Otras"
     out.push({
       razon:String(razon).trim(),
       doc:r[c.doc]!=null?String(r[c.doc]).trim():'',
       dep:dep, prov:r[c.prov]||'', dist:r[c.dist]||'',
       res:r[c.res]||'', fec:r[c.fec], year:yearOf(r[c.fec]), yearBaja:(c.felim>=0?yearOf(r[c.felim]):null),
       capRaw:r[c.capr]||'', cap:toNum(c.capn>=0?r[c.capn]:r[c.capr]),
-      est:norm(r[c.est]), act:act, sub:norm(r[c.sub])
+      est:norm(r[c.est]), act:act, sub:norm(r[c.sub]),
+      esOtra:act==='OTRAS' // el dashboard no las considera; los reportes sí
     });
   }
   return out;
@@ -411,9 +475,14 @@ function parseHist(rows){
   return out;
 }
 
+/* separa el padrón que consume el dashboard (sin "Otras") del que consumen los reportes */
+function splitRegistry(all){
+  RAW.matriz=all.filter(r=>!r.esOtra);
+  RAW.otras =all.filter(r=> r.esOtra);
+}
 function parseWorkbook(wb){
-  RAW.matriz=parseRegistry(findSheet(wb,'Matriz'));
-  RAW.elim=parseRegistry(findSheet(wb,'HISTORIAL ELIMINADAS'));
+  splitRegistry(parseRegistry(findSheet(wb,'Matriz')));
+  RAW.elim=parseRegistry(findSheet(wb,'HISTORIAL ELIMINADAS')).filter(r=>!r.esOtra);
   RAW.hist=parseHist(findSheet(wb,'TENDENCIAS')) ;
   if(!RAW.hist.length) RAW.hist=parseHist(findSheet(wb,'RESUMEN'));
 }
@@ -672,6 +741,297 @@ function fillTable(){
     <td>${r.razon}</td><td>${r.dep}</td><td>${r.dist||'—'}</td><td>${r.act}</td>
     <td>${r.capRaw||'—'}</td><td>${badge(r.est)}</td><td>${r.res||'—'}</td><td>${fdate(r.fec)}</td></tr>`).join('');
   $('#tcount').textContent=`${fmt(rows.length)} de ${fmt(RAW.matriz.length)} licencias`;
+}
+
+/* ---------- reportes ---------- */
+/* orden geográfico norte→sur del cuadro oficial; lo no listado se agrega al final */
+const REP_ORDER=['TUMBES','PIURA','LAMBAYEQUE','LA LIBERTAD','ANCASH','LIMA','ICA','AREQUIPA','MOQUEGUA','TACNA','CAJAMARCA','JUNIN','PUNO','UNIDAD MOVIL'];
+const REP_CATS=['E','C','Cu','ACP','N','R','RUI'];
+const U_LONG={'C/T':'Cajas / Turno','T/D':'Toneladas / Día','T/M':'Toneladas / Mes','T/H':'Toneladas / Hora'};
+const U_SHORT={'C/T':'cajas/turno','T/D':'t/d','T/M':'t/m','T/H':'t/h'};
+const CAT_UNIT={E:'C/T',C:'T/D',Cu:'T/M',ACP:'T/H',N:'T/H',R:'T/H',RUI:'T/H'};
+const ACT_UNIT={HARINA:'T/H',CONGELADO:'T/D',CURADO:'T/M',ENLATADO:'C/T'};
+/* la unidad viene en el sufijo de CAPACIDAD (p. ej. "10T/D"); la actividad es el respaldo */
+function unitOf(r){
+  const m=String(r.capRaw||'').toUpperCase().match(/(T\/H|T\/D|T\/M|C\/T)\s*$/);
+  return m?m[1]:(ACT_UNIT[r.act]||'');
+}
+const repPool=()=>RAW.matriz.concat(RAW.otras);
+const nf2=n=>(+n||0).toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2});
+/* las sumas acumulan ruido binario (12741.259999999998); Excel guarda el valor crudo */
+const r2=n=>Math.round((+n||0)*100)/100;
+const stamp=()=>new Date().toLocaleDateString('es-PE');
+const fileStamp=()=>new Date().toISOString().slice(0,10);
+function fdateR(v){
+  if(v instanceof Date) return v.toLocaleDateString('es-PE');
+  const s=String(v||''); let m=s.match(/(\d{4})-(\d{2})-(\d{2})/);
+  if(m) return `${m[3]}/${m[2]}/${m[1]}`;
+  m=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if(m) return `${m[1].padStart(2,'0')}/${m[2].padStart(2,'0')}/${m[3]}`;
+  return s||'—';
+}
+
+/* ----- estado de los formularios ----- */
+const q1={act:'',sub:'',est:'',dep:'',prov:'',dist:''}, q2={dep:''};
+function q1Opts(){
+  const pool=repPool();
+  fill('#q1Sub','Todas las subactividades',
+    uniqSorted(pool.filter(r=>(!q1.act||r.act===q1.act)&&r.sub).map(r=>r.sub)));
+  fill('#q1Prov','Todas las provincias',
+    uniqSorted(pool.filter(r=>!q1.dep||r.dep===q1.dep).map(r=>norm(r.prov))));
+  fill('#q1Dist','Todos los distritos',
+    uniqSorted(pool.filter(r=>(!q1.dep||r.dep===q1.dep)&&(!q1.prov||norm(r.prov)===q1.prov)).map(r=>norm(r.dist))));
+  $('#q1Sub').value=q1.sub; $('#q1Prov').value=q1.prov; $('#q1Dist').value=q1.dist;
+}
+function rep1Rows(){
+  return repPool().filter(r=>
+    (!q1.act||r.act===q1.act)&&(!q1.sub||r.sub===q1.sub)&&(!q1.est||r.est===q1.est)&&
+    (!q1.dep||r.dep===q1.dep)&&(!q1.prov||norm(r.prov)===q1.prov)&&(!q1.dist||norm(r.dist)===q1.dist))
+  .sort((a,b)=>a.dep.localeCompare(b.dep)||norm(a.prov).localeCompare(norm(b.prov))||a.razon.localeCompare(b.razon));
+}
+function q1Desc(){
+  const p=[q1.act,q1.sub,q1.est,q1.dep,q1.prov,q1.dist].filter(Boolean);
+  return p.length?p.join(' · '):'Padrón completo';
+}
+function totalsByUnit(rows){
+  const t={};
+  rows.forEach(r=>{const u=unitOf(r)||'—'; t[u]=(t[u]||0)+(r.cap||0);});
+  return t;
+}
+function repCount(){
+  const n=rep1Rows().length, el=$('#q1Count');
+  el.innerHTML=`<b>${fmt(n)}</b> planta${n===1?'':'s'} en la consulta`;
+  el.classList.toggle('zero',n===0); $('#q1Go').disabled=n===0;
+  const m=rep2Rows().length, e2=$('#q2Count');
+  e2.innerHTML=`<b>${fmt(m)}</b> regi${m===1?'ón':'ones'} en el cuadro`;
+  e2.classList.toggle('zero',m===0); $('#q2Go').disabled=m===0;
+}
+function buildRepFilters(){
+  const pool=repPool();
+  fill('#q1Act','Todas las actividades',uniqSorted(pool.map(r=>r.act)));
+  fill('#q1Est','Todos los estados',uniqSorted(pool.map(r=>r.est)));
+  fill('#q1Dep','Todos los departamentos',uniqSorted(pool.map(r=>r.dep)));
+  fill('#q2Dep','Todas las regiones',uniqSorted(RAW.matriz.map(r=>r.dep)));
+  q1Opts(); repCount();
+}
+$('#q1Act').onchange=e=>{q1.act=e.target.value;q1.sub='';q1Opts();repCount();};
+$('#q1Sub').onchange=e=>{q1.sub=e.target.value;repCount();};
+$('#q1Est').onchange=e=>{q1.est=e.target.value;repCount();};
+$('#q1Dep').onchange=e=>{q1.dep=e.target.value;q1.prov='';q1.dist='';q1Opts();repCount();};
+$('#q1Prov').onchange=e=>{q1.prov=e.target.value;q1.dist='';q1Opts();repCount();};
+$('#q1Dist').onchange=e=>{q1.dist=e.target.value;repCount();};
+$('#q2Dep').onchange=e=>{q2.dep=e.target.value;repCount();};
+$('#q1Clear').onclick=()=>{
+  Object.keys(q1).forEach(k=>q1[k]='');
+  ['#q1Act','#q1Est','#q1Dep'].forEach(s=>$(s).value='');
+  q1Opts(); repCount();
+};
+$('#q1Go').onclick=()=>{ $('#q1Fmt').value==='xlsx'?rep1Xlsx():rep1Pdf(); };
+$('#q2Go').onclick=()=>{ $('#q2Fmt').value==='xlsx'?rep2Xlsx():rep2Pdf(); };
+
+/* ----- datos del cuadro por región ----- */
+function rep2Rows(){
+  const agg=mapAgg(), only=q2.dep?deburr(q2.dep):'';
+  const keys=REP_ORDER.filter(k=>agg[k]).concat(Object.keys(agg).filter(k=>!REP_ORDER.includes(k)).sort());
+  return keys.filter(k=>!only||k===only).map(k=>({key:k,name:agg[k].name,cats:agg[k].cats}));
+}
+function rep2Otras(){
+  const only=q2.dep?deburr(q2.dep):'', by={};
+  RAW.otras.forEach(r=>{
+    const k=deburr(r.dep); if(only&&k!==only) return;
+    const id=k+'|'+r.sub;
+    const o=by[id]=by[id]||{key:k,dep:r.dep,act:r.sub,n:0,cap:0,u:unitOf(r)};
+    o.n++; o.cap+=(r.cap||0);
+  });
+  const rank=k=>{const i=REP_ORDER.indexOf(k);return i<0?99:i;};
+  return Object.values(by).sort((a,b)=>rank(a.key)-rank(b.key)||a.act.localeCompare(b.act));
+}
+function rep2Matrix(){
+  const rows=rep2Rows();
+  const cell=(o,c)=>{const e=o.cats[c];return e?[e.n,e.cap]:[0,0];};
+  const body=rows.map(o=>{const out=[o.name];REP_CATS.forEach(c=>{const[n,cap]=cell(o,c);out.push(n,cap);});return out;});
+  const tot=['Total']; REP_CATS.forEach((c,i)=>{
+    let n=0,cap=0; rows.forEach(o=>{const[a,b]=cell(o,c);n+=a;cap+=b;}); tot.push(n,cap);
+  });
+  return {rows,body,tot};
+}
+function q2Desc(){ return q2.dep?('Región: '+q2.dep):'Todas las regiones'; }
+
+/* ----- PDF ----- */
+const C_RED=[200,16,46], C_SUB=[229,231,235], C_ALT=[250,249,246],
+      C_GRAY=[154,163,175], C_INK=[22,25,29], C_TOT=[253,236,239];
+function pdfNew(orient){ return new window.jspdf.jsPDF({orientation:orient,unit:'pt',format:'a4'}); }
+function pdfHead(doc,titulo,sub){
+  const W=doc.internal.pageSize.getWidth();
+  doc.setFont('helvetica','bold').setFontSize(13).setTextColor(...C_INK);
+  doc.text(titulo,W/2,44,{align:'center'});
+  if(sub){
+    doc.setFont('helvetica','normal').setFontSize(9).setTextColor(107,114,128);
+    doc.text(sub,W/2,60,{align:'center'});
+  }
+  doc.setFont('helvetica','normal').setFontSize(8).setTextColor(107,114,128);
+  doc.text('Fecha de impresión: '+stamp(),W-30,30,{align:'right'});
+}
+function pdfFoot(doc){
+  const n=doc.internal.getNumberOfPages(),
+        W=doc.internal.pageSize.getWidth(), H=doc.internal.pageSize.getHeight();
+  for(let i=1;i<=n;i++){
+    doc.setPage(i);
+    doc.setFont('helvetica','normal').setFontSize(8).setTextColor(...C_GRAY);
+    doc.text(`Página ${i} de ${n}`,W-30,H-16,{align:'right'});
+  }
+}
+const grayZeros=d=>{
+  if(d.section==='body'&&d.column.index>0&&(d.cell.text.join('')==='0'||d.cell.text.join('')==='0.00'))
+    d.cell.styles.textColor=C_GRAY;
+};
+
+function rep1Pdf(){
+  const rows=rep1Rows(); if(!rows.length) return;
+  const doc=pdfNew('landscape');
+  const tot=totalsByUnit(rows);
+  const foot=Object.keys(tot).sort().map(u=>[
+    {content:'TOTAL '+(U_SHORT[u]||u),colSpan:8,styles:{halign:'right'}},
+    {content:nf2(tot[u]),styles:{halign:'right'}}
+  ]);
+  doc.autoTable({
+    head:[['N°','RAZÓN SOCIAL','DEPARTAMENTO','PROVINCIA','DISTRITO','LICENCIA','RESOLUCIÓN','FECHA RES.','CAPACIDAD']],
+    body:rows.map((r,i)=>[i+1,r.razon,r.dep,norm(r.prov)||'—',norm(r.dist)||'—',r.est,r.res||'—',
+      fdateR(r.fec),nf2(r.cap)+' '+(U_SHORT[unitOf(r)]||'')]),
+    foot:foot,
+    startY:76, margin:{top:76,left:30,right:30,bottom:34},
+    styles:{font:'helvetica',fontSize:7.5,cellPadding:4,textColor:C_INK,lineColor:C_SUB,lineWidth:.4,overflow:'linebreak'},
+    headStyles:{fillColor:C_RED,textColor:255,fontStyle:'bold',halign:'center',valign:'middle'},
+    footStyles:{fillColor:C_TOT,textColor:C_RED,fontStyle:'bold'},
+    alternateRowStyles:{fillColor:C_ALT},
+    columnStyles:{0:{halign:'right',cellWidth:26},1:{cellWidth:170},8:{halign:'right',cellWidth:66}},
+    didDrawPage:()=>pdfHead(doc,'PLANTAS DE PROCESAMIENTO DE RECURSOS HIDROBIOLÓGICOS',q1Desc())
+  });
+  const y=doc.lastAutoTable.finalY+14;
+  doc.setFont('helvetica','normal').setFontSize(7.5).setTextColor(...C_GRAY);
+  doc.text(Object.keys(tot).sort().map(u=>`${U_SHORT[u]||u} = ${U_LONG[u]||'sin unidad'}`).join('   ·   '),30,y);
+  pdfFoot(doc);
+  doc.save(`Consulta_plantas_${fileStamp()}.pdf`);
+}
+
+function rep2Pdf(){
+  const {body,tot}=rep2Matrix(); if(!body.length) return;
+  const doc=pdfNew('landscape');
+  const head=[
+    [{content:'REGIÓN',rowSpan:3},{content:'ENLATADO',colSpan:2,rowSpan:2},
+     {content:'CONGELADO',colSpan:2,rowSpan:2},{content:'CURADO',colSpan:2,rowSpan:2},
+     {content:'TIPO DE HARINA',colSpan:8}],
+    [{content:'ALTO CONTENIDO PROTEÍNICO (ACP)',colSpan:2},{content:'CONVENCIONAL',colSpan:2},
+     {content:'RESIDUAL',colSpan:2},{content:'RESIDUAL (U. INDEPENDIENTE)',colSpan:2}],
+    REP_CATS.flatMap(c=>['Número','Capacidad Instalada\n('+U_LONG[CAT_UNIT[c]]+')'])
+  ];
+  const fmtRow=r=>r.map((v,i)=>i===0?v:(i%2?fmt(v):nf2(v)));
+  doc.autoTable({
+    head, body:[fmtRow(tot)].concat(body.map(fmtRow)),
+    startY:76, margin:{top:76,left:22,right:22,bottom:34},
+    styles:{font:'helvetica',fontSize:6.6,cellPadding:3,textColor:C_INK,lineColor:C_SUB,lineWidth:.4,halign:'right',valign:'middle'},
+    headStyles:{fillColor:C_RED,textColor:255,fontStyle:'bold',halign:'center',valign:'middle',fontSize:6.4},
+    alternateRowStyles:{fillColor:C_ALT},
+    columnStyles:{0:{halign:'left',fontStyle:'bold',cellWidth:64}},
+    didParseCell:d=>{
+      if(d.section==='head'&&d.row.index===2){ d.cell.styles.fillColor=C_SUB; d.cell.styles.textColor=C_INK; }
+      if(d.section==='body'&&d.row.index===0){
+        d.cell.styles.fillColor=C_TOT; d.cell.styles.textColor=C_RED; d.cell.styles.fontStyle='bold';
+      } else grayZeros(d);
+    },
+    didDrawPage:()=>pdfHead(doc,'DISTRIBUCIÓN DE ESTABLECIMIENTOS INDUSTRIALES PESQUEROS',
+      'SEGÚN REGIÓN · '+q2Desc())
+  });
+  const otras=rep2Otras();
+  if(otras.length){
+    doc.autoTable({
+      head:[['REGIÓN','ACTIVIDAD','N° DE PLANTAS','CAP. INSTALADA']],
+      body:otras.map(o=>[o.dep,o.act,fmt(o.n),nf2(o.cap)+' '+(U_SHORT[o.u]||'')]),
+      startY:doc.lastAutoTable.finalY+26, margin:{left:22,right:22,bottom:34},
+      styles:{font:'helvetica',fontSize:7,cellPadding:3.5,textColor:C_INK,lineColor:C_SUB,lineWidth:.4},
+      headStyles:{fillColor:C_RED,textColor:255,fontStyle:'bold',halign:'center'},
+      alternateRowStyles:{fillColor:C_ALT},
+      columnStyles:{2:{halign:'right',cellWidth:76},3:{halign:'right',cellWidth:96}},
+      willDrawPage:()=>{
+        doc.setFont('helvetica','bold').setFontSize(9).setTextColor(...C_INK);
+        doc.text('OTRAS ACTIVIDADES:',22,doc.lastAutoTable?doc.lastAutoTable.finalY+16:70);
+      }
+    });
+  }
+  pdfFoot(doc);
+  doc.save(`Distribucion_por_region_${fileStamp()}.pdf`);
+}
+
+/* ----- Excel ----- */
+function saveBook(sheets,nombre){
+  const wb=XLSX.utils.book_new();
+  sheets.forEach(s=>{
+    const ws=XLSX.utils.aoa_to_sheet(s.aoa);
+    if(s.cols) ws['!cols']=s.cols;
+    if(s.merges) ws['!merges']=s.merges;
+    XLSX.utils.book_append_sheet(wb,ws,s.name);
+  });
+  XLSX.writeFile(wb,nombre);
+}
+function rep1Xlsx(){
+  const rows=rep1Rows(); if(!rows.length) return;
+  const tot=totalsByUnit(rows);
+  const aoa=[
+    ['PLANTAS DE PROCESAMIENTO DE RECURSOS HIDROBIOLÓGICOS'],
+    ['Criterios: '+q1Desc()],
+    ['Fecha de emisión: '+stamp()],
+    [],
+    ['N°','RAZÓN SOCIAL','DEPARTAMENTO','PROVINCIA','DISTRITO','LICENCIA','RESOLUCIÓN','FECHA RES.','CAPACIDAD','UNIDAD']
+  ];
+  rows.forEach((r,i)=>aoa.push([i+1,r.razon,r.dep,norm(r.prov)||'',norm(r.dist)||'',r.est,r.res||'',
+    fdateR(r.fec),r2(r.cap),U_SHORT[unitOf(r)]||'']));
+  aoa.push([]);
+  Object.keys(tot).sort().forEach(u=>aoa.push(['','','','','','','','TOTAL '+(U_SHORT[u]||u),r2(tot[u]),U_SHORT[u]||u]));
+  saveBook([{name:'Consulta',aoa,
+    cols:[{wch:5},{wch:52},{wch:15},{wch:16},{wch:18},{wch:12},{wch:34},{wch:12},{wch:12},{wch:12}],
+    merges:[0,1,2].map(r=>({s:{r,c:0},e:{r,c:9}}))
+  }],`Consulta_plantas_${fileStamp()}.xlsx`);
+}
+function rep2Xlsx(){
+  const {rows,body,tot}=rep2Matrix(); if(!body.length) return;
+  const blank=n=>Array(n).fill('');
+  const aoa=[
+    ['DISTRIBUCIÓN DE ESTABLECIMIENTOS INDUSTRIALES PESQUEROS'],
+    ['SEGÚN REGIÓN · '+q2Desc()],
+    ['Fecha de emisión: '+stamp()],
+    [],
+    ['REGIÓN','ENLATADO','','CONGELADO','','CURADO','','TIPO DE HARINA','','','','','','',''],
+    ['','','','','','','','ALTO CONTENIDO PROTEÍNICO (ACP)','','CONVENCIONAL','','RESIDUAL','','RESIDUAL (U. INDEPENDIENTE)',''],
+    ['REGIÓN'].concat(REP_CATS.flatMap(c=>['Número','Capacidad Instalada ('+U_LONG[CAT_UNIT[c]]+')'])),
+    tot.map((v,i)=>i&&i%2===0?r2(v):v)
+  ].concat(body.map(row=>row.map((v,i)=>i&&i%2===0?r2(v):v)));
+  const merges=[
+    ...[0,1,2].map(r=>({s:{r,c:0},e:{r,c:14}})),
+    {s:{r:4,c:0},e:{r:6,c:0}},
+    {s:{r:4,c:1},e:{r:5,c:2}},{s:{r:4,c:3},e:{r:5,c:4}},{s:{r:4,c:5},e:{r:5,c:6}},
+    {s:{r:4,c:7},e:{r:4,c:14}},
+    {s:{r:5,c:7},e:{r:5,c:8}},{s:{r:5,c:9},e:{r:5,c:10}},{s:{r:5,c:11},e:{r:5,c:12}},{s:{r:5,c:13},e:{r:5,c:14}}
+  ];
+  const cols=[{wch:16}].concat(REP_CATS.flatMap(()=>[{wch:9},{wch:17}]));
+
+  const otras=rep2Otras();
+  const oAoa=[['OTRAS ACTIVIDADES'],['Fecha de emisión: '+stamp()],[],
+    ['REGIÓN','ACTIVIDAD','N° DE PLANTAS','CAP. INSTALADA','UNIDAD']];
+  otras.forEach(o=>oAoa.push([o.dep,o.act,o.n,r2(o.cap),U_SHORT[o.u]||'']));
+
+  const det=[['DETALLE DE PLANTAS'],['Fecha de emisión: '+stamp()],[],
+    ['RAZÓN SOCIAL','RUC','DEPARTAMENTO','PROVINCIA','DISTRITO','ACTIVIDAD','SUBACTIVIDAD','CATEGORÍA','LICENCIA','RESOLUCIÓN','FECHA RES.','CAPACIDAD','UNIDAD']];
+  const only=q2.dep?deburr(q2.dep):'';
+  RAW.matriz.filter(r=>!only||deburr(r.dep)===only)
+    .sort((a,b)=>a.dep.localeCompare(b.dep)||a.razon.localeCompare(b.razon))
+    .forEach(r=>det.push([r.razon,r.doc,r.dep,norm(r.prov),norm(r.dist),r.act,r.sub,
+      (CATMAP[catOf(r)]||{}).full||'',r.est,r.res||'',fdateR(r.fec),r2(r.cap),U_SHORT[unitOf(r)]||'']));
+
+  saveBook([
+    {name:'Distribución',aoa,merges,cols},
+    {name:'Detalle',aoa:det,cols:[{wch:52},{wch:13},{wch:15},{wch:16},{wch:18},{wch:12},{wch:26},{wch:34},{wch:12},{wch:34},{wch:12},{wch:11},{wch:11}]},
+    {name:'Otras actividades',aoa:oAoa,cols:[{wch:16},{wch:42},{wch:14},{wch:15},{wch:10}]}
+  ],`Distribucion_por_region_${fileStamp()}.xlsx`);
 }
 
 /* ---------- tabs ---------- */
