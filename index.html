@@ -568,6 +568,7 @@ const CATS=[
   {k:'ACP',code:'A.C.P.',l:'A.C.P.',full:'Alto Contenido Proteínico',u:'T/h'},
   {k:'N',code:'N',l:'Harina Normal',full:'Harina Normal',u:'T/h'},
   {k:'R',code:'R',l:'Harina Residual',full:'Harina Residual',u:'T/h'},
+  {k:'RUI',code:'R-UI',l:'Harina Res. (U.Ind.)',full:'Harina Residual (Unidad Independiente)',u:'T/h'},
   {k:'C',code:'C',l:'Congelado',full:'Congelado',u:'T/día'},
   {k:'Cu',code:'Cu',l:'Curado',full:'Curado',u:'T/mes'},
   {k:'E',code:'E',l:'Enlatado',full:'Enlatado',u:'Cajas/Turno'},
@@ -581,6 +582,7 @@ function catOf(r){
   if(r.act==='HARINA'){
     if(r.sub.includes('ALTO CONTENIDO'))return 'ACP';
     if(r.sub.includes('CONVENCIONAL'))return 'N';
+    if(r.sub.includes('INDEPENDIENTE'))return 'RUI';
     if(r.sub.includes('RESIDUAL'))return 'R';
     return 'N';
   }
