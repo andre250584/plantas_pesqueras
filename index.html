@@ -766,8 +766,9 @@ function fdateR(v){
   if(v instanceof Date) return v.toLocaleDateString('es-PE');
   const s=String(v||''); let m=s.match(/(\d{4})-(\d{2})-(\d{2})/);
   if(m) return `${m[3]}/${m[2]}/${m[1]}`;
+  /* la fuente entrega m/d/aaaa (3/30/2015 = 30 de marzo); se emite como d/m/aaaa */
   m=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-  if(m) return `${m[1].padStart(2,'0')}/${m[2].padStart(2,'0')}/${m[3]}`;
+  if(m) return `${m[2].padStart(2,'0')}/${m[1].padStart(2,'0')}/${m[3]}`;
   return s||'—';
 }
 
@@ -898,7 +899,7 @@ function rep1Pdf(){
     head:[['N°','RAZÓN SOCIAL','DEPARTAMENTO','PROVINCIA','DISTRITO','LICENCIA','RESOLUCIÓN','FECHA RES.','CAPACIDAD']],
     body:rows.map((r,i)=>[i+1,r.razon,r.dep,norm(r.prov)||'—',norm(r.dist)||'—',r.est,r.res||'—',
       fdateR(r.fec),nf2(r.cap)+' '+(U_SHORT[unitOf(r)]||'')]),
-    foot:foot,
+    foot:foot, showFoot:'lastPage',
     startY:76, margin:{top:76,left:30,right:30,bottom:34},
     styles:{font:'helvetica',fontSize:7.5,cellPadding:4,textColor:C_INK,lineColor:C_SUB,lineWidth:.4,overflow:'linebreak'},
     headStyles:{fillColor:C_RED,textColor:255,fontStyle:'bold',halign:'center',valign:'middle'},
