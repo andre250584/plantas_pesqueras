@@ -9,6 +9,10 @@ Tablero web del consolidado de licencias de plantas de procesamiento de recursos
 - **Evolución histórica** — capacidad instalada 1991–2026: harina por tipo (ACP, convencional, residual) y, por separado, enlatado, congelado y curado.
 - **Dinámica del padrón** — altas y bajas de licencias por año y padrón acumulado.
 - **Detalle** — tabla buscable y ordenable de todas las licencias.
+- **Reportes** — dos consultas exportables a PDF o Excel, con filtros propios independientes de la barra superior:
+  - *Consulta de planta por tipo de procesamiento y actividad*: listado de plantas filtrable por actividad, subactividad, estado y ubicación. Sale dividido en secciones por actividad y subactividad, con la unidad en la cabecera de la columna **Capacidad**, un total por sección y un resumen general por unidad.
+  - *Distribución de establecimientos industriales pesqueros según región*: cuadro de número de plantas y capacidad instalada por región y actividad, con el anexo de otras actividades y, en Excel, una hoja de detalle.
+
 Incluye filtros por departamento, actividad, subactividad (cuando aplica) y estado, además de selector de tema claro/oscuro.
  
 ## Fuente de datos
@@ -25,18 +29,21 @@ Las URLs publicadas están configuradas dentro del archivo (constante `SHEET_URL
 ## Reglas de negocio aplicadas
  
 - **Callao se integra a Lima**: sus plantas se suman a Lima en todas las vistas; el distrito real se conserva en la tabla de detalle.
-- **La actividad "Otras" no se considera** en ningún indicador, gráfico ni cuadro.
+- **La actividad "Otras" sí se considera** en los KPIs, gráficos y tabla del tablero. En el cuadro por región se aparta a un anexo propio, porque no encaja en las categorías del cuadro oficial.
 - La **capacidad** se trata siempre por actividad, nunca como un total único, porque cada actividad usa una unidad distinta (harina t/h, congelado t/día, enlatado cajas/turno, curado t/mes).
+
 ## Cómo publicarlo (GitHub Pages)
  
+El despliegue está automatizado con GitHub Actions (`.github/workflows/pages.yml`): cada push a `main` publica el sitio.
+
 1. Crea un repositorio **público** y sube el archivo como `index.html`.
-2. **Settings → Pages → Deploy from a branch → main → / (root) → Save**.
+2. **Settings → Pages → Source → GitHub Actions**.
 3. En 1–2 minutos queda disponible en `https://tu-usuario.github.io/nombre-del-repo/`.
-Para actualizar el tablero, vuelve a subir el `index.html` sobre el anterior.
+Para actualizar el tablero basta con hacer commit y push del `index.html` a `main`; el workflow se encarga del resto.
  
 ## Tecnología
  
-HTML, CSS y JavaScript sin framework. Usa [SheetJS](https://sheetjs.com/) para leer los CSV/Excel y [Chart.js](https://www.chartjs.org/) para los gráficos, ambos vía CDN. La geometría de los departamentos del Perú está incrustada en el propio archivo, por lo que el mapa funciona sin conexión.
+HTML, CSS y JavaScript sin framework. Usa [SheetJS](https://sheetjs.com/) para leer los CSV/Excel y generar los reportes en Excel, [Chart.js](https://www.chartjs.org/) para los gráficos y [jsPDF](https://github.com/parallax/jsPDF) con [jspdf-autotable](https://github.com/simonbengtsson/jsPDF-AutoTable) para los reportes en PDF, todos vía CDN. La geometría de los departamentos del Perú está incrustada en el propio archivo, por lo que el mapa funciona sin conexión.
  
 ## Privacidad
  
