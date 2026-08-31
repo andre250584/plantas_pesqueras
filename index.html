@@ -63,12 +63,12 @@ header.top{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom
 
 /* kpis */
 .kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:8px}
+.kpis.k4{grid-template-columns:repeat(4,1fr)}
 .kpi{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px 16px 14px;box-shadow:var(--shadow);position:relative;overflow:hidden}
 .kpi::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--rojo)}
 .kpi.t::before{background:var(--teal)} .kpi.g::before{background:var(--green)}
 .kpi.a::before{background:var(--amber)} .kpi.s::before{background:var(--slate)}
 .kpi .v{font-size:26px;font-weight:800;letter-spacing:-.5px;font-variant-numeric:tabular-nums;line-height:1.1}
-.kpi .v.mix{font-size:17px;letter-spacing:0}
 .kpi .l{font-size:11.5px;color:var(--muted);margin-top:3px;font-weight:500}
 
 /* tabs */
@@ -136,7 +136,7 @@ footer{margin-top:34px;text-align:center;font-size:11.5px;color:var(--muted)}
 @media(max-width:780px){.maplay{grid-template-columns:1fr}}
 .hidden{display:none!important}
 .note{font-size:11px;color:var(--muted);margin-top:10px;padding:9px 12px;background:color-mix(in srgb,var(--amber) 8%,transparent);border-radius:8px;border-left:3px solid var(--amber)}
-@media(max-width:860px){.kpis{grid-template-columns:repeat(2,1fr)}.grid2{grid-template-columns:1fr}.grid3{grid-template-columns:1fr}}
+@media(max-width:860px){.kpis,.kpis.k4{grid-template-columns:repeat(2,1fr)}.grid2{grid-template-columns:1fr}.grid3{grid-template-columns:1fr}}
 /* reportes */
 .rgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px 14px;margin:14px 0 16px}
 .rfld{display:flex;flex-direction:column;gap:5px}
@@ -203,7 +203,7 @@ footer{margin-top:34px;text-align:center;font-size:11.5px;color:var(--muted)}
       <div class="kpi t"><div class="v" id="kEmp">—</div><div class="l">Empresas únicas (RUC)</div></div>
       <div class="kpi g"><div class="v" id="kVig">—</div><div class="l">% vigentes</div></div>
       <div class="kpi a"><div class="v" id="kSus">—</div><div class="l">Suspendidas</div></div>
-      <div class="kpi s"><div class="v" id="kCap">—</div><div class="l" id="kCapL">Capacidad harina (t/h)</div></div>
+      <div class="kpi s" id="kCapCard"><div class="v" id="kCap">—</div><div class="l" id="kCapL">Capacidad instalada</div></div>
     </div>
 
     <div class="tabs" id="tabs">
@@ -501,9 +501,10 @@ function buildFilters(){
   $('#reset').onclick=()=>{state={dep:'',act:'',sub:'',est:'',q:$('#search').value};
     $('#fDep').value='';$('#fAct').value='';$('#fEst').value='';updateSub();refresh();};
 }
+const subsOf=act=>uniqSorted(RAW.matriz.filter(r=>r.act===act&&r.sub).map(r=>r.sub));
 function updateSub(){
   const wrap=$('#subWrap');
-  const subs=uniqSorted(RAW.matriz.filter(r=>r.act===state.act&&r.sub).map(r=>r.sub));
+  const subs=subsOf(state.act);
   if(state.act&&subs.length){
     fill('#fSub','Todas las subactividades',subs);
     $('#fSub').value=state.sub||'';
@@ -520,7 +521,6 @@ function refresh(){renderAll();fillTable();}
 
 /* ---------- KPIs ---------- */
 const fmt=n=>n==null?'—':n.toLocaleString('es-PE',{maximumFractionDigits:0});
-const UNIT={'HARINA':'t/h','ENLATADO':'cajas/turno','CONGELADO':'t/día','CURADO':'t/mes'};
 function kpis(){
   const d=filtered();
   $('#kLic').textContent=fmt(d.length);
@@ -528,14 +528,19 @@ function kpis(){
   const vig=d.filter(r=>r.est==='VIGENTE').length;
   $('#kVig').textContent=d.length?Math.round(vig/d.length*100)+'%':'—';
   $('#kSus').textContent=fmt(d.filter(r=>r.est.includes('SUSPEND')).length);
-  // capacidad sensible a la actividad: por defecto harina, si hay filtro usa esa actividad
-  const scope=state.act||'HARINA';
-  const rows=d.filter(r=>r.act===scope);
-  const units=totalsByUnit(rows), mix=Object.keys(units).length>1;
-  // "Otras" mezcla t/d y t/h: se muestran los totales separados en vez de una suma sin sentido
-  $('#kCap').textContent=mix?capByUnit(units):fmt(rows.reduce((a,r)=>a+(r.cap||0),0));
-  $('#kCap').classList.toggle('mix',mix);
-  $('#kCapL').textContent='Capacidad '+scope.toLowerCase()+(mix?'':' ('+(UNIT[scope]||'unid. mixtas')+')');
+  // la capacidad solo se suma dentro de un mismo tipo de planta: hace falta una actividad
+  // sin subactividades o una subactividad concreta; si no, la tarjeta no aplica y se oculta
+  const cap=!!state.act&&(!!state.sub||!subsOf(state.act).length);
+  $('#kCapCard').classList.toggle('hidden',!cap);
+  $('.kpis').classList.toggle('k4',!cap);
+  if(cap){
+    // la unidad se toma del tipo de planta, no de las filas visibles: así se conserva
+    // aunque el departamento o el estado dejen la selección en cero
+    const tipo=RAW.matriz.filter(r=>r.act===state.act&&(!state.sub||r.sub===state.sub));
+    const u=Object.keys(totalsByUnit(tipo))[0]||ACT_UNIT[state.act]||'';
+    $('#kCap').textContent=fmt(d.reduce((a,r)=>a+(r.cap||0),0));
+    $('#kCapL').textContent='Capacidad instalada'+(u?' ('+(U_SHORT[u]||u)+')':'');
+  }
 }
 
 /* ---------- charts ---------- */
@@ -800,11 +805,6 @@ function totalsByUnit(rows){
   const t={};
   rows.forEach(r=>{const u=unitOf(r)||'—'; t[u]=(t[u]||0)+(r.cap||0);});
   return t;
-}
-/* rinde un {unidad:total} como "93.81 t/d · 20.2 t/h": no suma unidades distintas */
-const fmtCap=n=>(+n||0).toLocaleString('es-PE',{maximumFractionDigits:2});
-function capByUnit(units){
-  return Object.keys(units).sort().map(u=>fmtCap(units[u])+' '+(U_SHORT[u]||u)).join(' · ');
 }
 function repCount(){
   const n=rep1Rows().length, el=$('#q1Count');
