@@ -178,7 +178,7 @@ body.print-map #v-map{width:1180px;margin:0 auto}
 body.print-map .maplay{grid-template-columns:440px 1fr}
 body.print-map #depCards{grid-template-columns:repeat(3,1fr)}
 
-@page{size:A4 landscape;margin:8mm}
+@page{size:A4 landscape;margin:12mm 10mm}
 
 @media print{
   /* paleta clara forzada: en tema oscuro la hoja sale igualmente en claro */
@@ -191,7 +191,8 @@ body.print-map #depCards{grid-template-columns:repeat(3,1fr)}
   body.print-map footer, body.print-map .no-print,
   body.print-map .view:not(#v-map){display:none!important}
 
-  body.print-map .wrap{max-width:none;padding:0;margin:0}
+  /* --ptop reparte el sobrante vertical, para que el bloque no quede pegado arriba */
+  body.print-map .wrap{max-width:none;padding:var(--ptop,0) 0 0;margin:0}
   body.print-map .maptip{display:none}
   body.print-map .panel{box-shadow:none}
 
@@ -799,13 +800,16 @@ function renderMapTab(){
 /* Escala mapa + codigos + tarjetas para que quepan en una A4 horizontal. La medicion
    se hace con el ancho de impresion forzado; al ser sincrona no hay repintado ni parpadeo. */
 const PRINT_W=1180, PX=96/25.4,
-      AVAIL_W=(297-16)*PX, AVAIL_H=(210-16)*PX;  // A4 apaisada menos los margenes de @page
+      M_V=12, M_H=10,                            // deben coincidir con el margin de @page
+      AVAIL_W=(297-2*M_H)*PX, AVAIL_H=(210-2*M_V)*PX;   // A4 apaisada menos esos margenes
 function printMap(){
   $('#phDate').textContent=stamp();
   document.body.classList.add('print-map');      // fija la maqueta de la hoja
   const h=$('#v-map').scrollHeight;              // reflujo forzado, todavia sin pintar
   const z=Math.min(AVAIL_W/PRINT_W, AVAIL_H/h, 1)*0.97;   // 3% de holgura
-  document.body.style.setProperty('--pz', z.toFixed(3));
+  const st=document.body.style;
+  st.setProperty('--pz', z.toFixed(3));
+  st.setProperty('--ptop', Math.max(0,(AVAIL_H-h*z)/2).toFixed(1)+'px');
   window.print();
 }
 window.addEventListener('afterprint',()=>document.body.classList.remove('print-map'));
