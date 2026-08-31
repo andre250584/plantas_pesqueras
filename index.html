@@ -68,6 +68,7 @@ header.top{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom
 .kpi.t::before{background:var(--teal)} .kpi.g::before{background:var(--green)}
 .kpi.a::before{background:var(--amber)} .kpi.s::before{background:var(--slate)}
 .kpi .v{font-size:26px;font-weight:800;letter-spacing:-.5px;font-variant-numeric:tabular-nums;line-height:1.1}
+.kpi .v.mix{font-size:17px;letter-spacing:0}
 .kpi .l{font-size:11.5px;color:var(--muted);margin-top:3px;font-weight:500}
 
 /* tabs */
@@ -229,7 +230,7 @@ footer{margin-top:34px;text-align:center;font-size:11.5px;color:var(--muted)}
         <div class="mapcol-stack">
           <div class="panel mapcol">
             <h3>Plantas por departamento</h3>
-            <p class="sub">Sombreado según número de plantas. Pasa el cursor para ver el detalle; haz clic para ir a su cuadro.</p>
+            <p class="sub">Sombreado según número de plantas. Pasa el cursor para ver el detalle; haz clic para ir a su cuadro. No incluye “Otras actividades”.</p>
             <div id="mapHost"></div>
             <div class="mlegend">
               <span class="mlg"><i style="background:var(--line)"></i>Sin plantas</span>
@@ -392,7 +393,7 @@ async function loadFromUrls(){
   const get=u=>fetch(u,{cache:'no-store'}).then(r=>{if(!r.ok)throw new Error('HTTP '+r.status);return r.text();});
   const [m,t,e]=await Promise.all([get(SHEET_URLS.matriz),get(SHEET_URLS.hist),get(SHEET_URLS.elim)]);
   splitRegistry(parseRegistry(rowsFromCsv(m)));
-  RAW.elim=parseRegistry(rowsFromCsv(e)).filter(r=>!r.esOtra);
+  RAW.elim=parseRegistry(rowsFromCsv(e));
   RAW.hist=parseHist(rowsFromCsv(t));
   if(!RAW.matriz.length) throw new Error('La hoja Matriz no devolvió datos');
   showApp();
@@ -447,7 +448,7 @@ function parseRegistry(rows){
       res:r[c.res]||'', fec:r[c.fec], year:yearOf(r[c.fec]), yearBaja:(c.felim>=0?yearOf(r[c.felim]):null),
       capRaw:r[c.capr]||'', cap:toNum(c.capn>=0?r[c.capn]:r[c.capr]),
       est:norm(r[c.est]), act:act, sub:norm(r[c.sub]),
-      esOtra:act==='OTRAS' // el dashboard no las considera; los reportes sí
+      esOtra:act==='OTRAS' // marca el grupo que los reportes publican en anexo aparte
     });
   }
   return out;
@@ -475,14 +476,14 @@ function parseHist(rows){
   return out;
 }
 
-/* separa el padrón que consume el dashboard (sin "Otras") del que consumen los reportes */
+/* padrón completo para todo el tablero; "Otras" además se aparta para el anexo de los reportes */
 function splitRegistry(all){
-  RAW.matriz=all.filter(r=>!r.esOtra);
+  RAW.matriz=all;
   RAW.otras =all.filter(r=> r.esOtra);
 }
 function parseWorkbook(wb){
   splitRegistry(parseRegistry(findSheet(wb,'Matriz')));
-  RAW.elim=parseRegistry(findSheet(wb,'HISTORIAL ELIMINADAS')).filter(r=>!r.esOtra);
+  RAW.elim=parseRegistry(findSheet(wb,'HISTORIAL ELIMINADAS'));
   RAW.hist=parseHist(findSheet(wb,'TENDENCIAS')) ;
   if(!RAW.hist.length) RAW.hist=parseHist(findSheet(wb,'RESUMEN'));
 }
@@ -529,10 +530,12 @@ function kpis(){
   $('#kSus').textContent=fmt(d.filter(r=>r.est.includes('SUSPEND')).length);
   // capacidad sensible a la actividad: por defecto harina, si hay filtro usa esa actividad
   const scope=state.act||'HARINA';
-  const cap=d.filter(r=>r.act===scope).reduce((a,r)=>a+(r.cap||0),0);
-  const unit=UNIT[scope]||'unid. mixtas';
-  $('#kCap').textContent=fmt(cap);
-  $('#kCapL').textContent='Capacidad '+scope.toLowerCase()+' ('+unit+')';
+  const rows=d.filter(r=>r.act===scope);
+  const units=totalsByUnit(rows), mix=Object.keys(units).length>1;
+  // "Otras" mezcla t/d y t/h: se muestran los totales separados en vez de una suma sin sentido
+  $('#kCap').textContent=mix?capByUnit(units):fmt(rows.reduce((a,r)=>a+(r.cap||0),0));
+  $('#kCap').classList.toggle('mix',mix);
+  $('#kCapL').textContent='Capacidad '+scope.toLowerCase()+(mix?'':' ('+(UNIT[scope]||'unid. mixtas')+')');
 }
 
 /* ---------- charts ---------- */
@@ -661,7 +664,7 @@ const deburr=s=>(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperC
 function mapAgg(){
   const by={};
   RAW.matriz.forEach(r=>{
-    const c=catOf(r); if(c==='O') return; // el mapa no considera "Otras"
+    const c=catOf(r); if(c==='O') return; // "Otras" distorsiona el mapa; va aparte en los reportes
     const k=deburr(r.dep)||'—';
     const o=by[k]=by[k]||{name:r.dep,total:0,cats:{}};
     o.total++;
@@ -718,7 +721,6 @@ function renderMapTab(){
   $('#depCards').innerHTML=entries.map(([k,o])=>{
     const rows=CATS.filter(c=>o.cats[c.k]).map(c=>{const e=o.cats[c.k];
       return `<tr><td>${c.l}</td><td>${e.n}</td><td>${fmt(e.cap)}</td></tr>`;}).join('');
-    const capTot=Object.values(o.cats).reduce((a,e)=>a+e.cap,0);
     return `<div class="dcard" id="dc-${k}">
       <h4>${o.name}<span>${o.total} plantas</span></h4>
       <table><thead><tr><th>Tipo</th><th>N°</th><th>Capac.</th></tr></thead>
@@ -732,7 +734,7 @@ $$('#tbl thead th').forEach(th=>th.onclick=()=>{const k=th.dataset.k;sortDir=(so
 function fillTable(){
   let rows=filtered();
   const q=norm(state.q);
-  if(q) rows=rows.filter(r=>norm(r.razon).includes(q)||norm(r.dep).includes(q)||norm(r.prov).includes(q)||norm(r.dist).includes(q)||norm(r.act).includes(q)||norm(r.est).includes(q)||norm(r.res).includes(q));
+  if(q) rows=rows.filter(r=>norm(r.razon).includes(q)||norm(r.dep).includes(q)||norm(r.prov).includes(q)||norm(r.dist).includes(q)||norm(r.act).includes(q)||norm(r.sub).includes(q)||norm(r.est).includes(q)||norm(r.res).includes(q));
   if(sortK){const map={razon:'razon',dep:'dep',dist:'dist',act:'act',cap:'cap',est:'est',res:'res',fec:'year'};
     const k=map[sortK];rows=[...rows].sort((a,b)=>{let x=a[k],y=b[k];if(typeof x==='number'||k==='cap'||k==='year'){return((x||0)-(y||0))*sortDir;}return String(x||'').localeCompare(String(y||''))*sortDir;});}
   const badge=e=>{const cl=e==='VIGENTE'?'b-vig':e.includes('SUSPEND')?'b-sus':'b-can';return `<span class="badge ${cl}">${e||'—'}</span>`;};
@@ -756,7 +758,7 @@ function unitOf(r){
   const m=String(r.capRaw||'').toUpperCase().match(/(T\/H|T\/D|T\/M|C\/T)\s*$/);
   return m?m[1]:(ACT_UNIT[r.act]||'');
 }
-const repPool=()=>RAW.matriz.concat(RAW.otras);
+const repPool=()=>RAW.matriz;
 const nf2=n=>(+n||0).toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2});
 /* las sumas acumulan ruido binario (12741.259999999998); Excel guarda el valor crudo */
 const r2=n=>Math.round((+n||0)*100)/100;
@@ -798,6 +800,11 @@ function totalsByUnit(rows){
   const t={};
   rows.forEach(r=>{const u=unitOf(r)||'—'; t[u]=(t[u]||0)+(r.cap||0);});
   return t;
+}
+/* rinde un {unidad:total} como "93.81 t/d · 20.2 t/h": no suma unidades distintas */
+const fmtCap=n=>(+n||0).toLocaleString('es-PE',{maximumFractionDigits:2});
+function capByUnit(units){
+  return Object.keys(units).sort().map(u=>fmtCap(units[u])+' '+(U_SHORT[u]||u)).join(' · ');
 }
 function repCount(){
   const n=rep1Rows().length, el=$('#q1Count');
