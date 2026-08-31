@@ -519,6 +519,13 @@ function updateSub(){
   }else{wrap.classList.add('hidden');state.sub='';}
 }
 function fill(sel,allLabel,vals){const s=$(sel);s.innerHTML=`<option value="">${allLabel}</option>`+vals.map(v=>`<option>${v}</option>`).join('');}
+/* select dependiente: sin el campo padre queda bloqueado y el placeholder dice qué falta */
+function fillDep(sel,listo,allLabel,vals,hintFalta,hintVacio){
+  const s=$(sel), aviso=t=>{s.innerHTML=`<option value="">${t}</option>`;s.disabled=true;};
+  if(!listo) aviso(hintFalta);
+  else if(!vals.length) aviso(hintVacio);
+  else { fill(sel,allLabel,vals); s.disabled=false; }
+}
 function filtered(){
   return RAW.matriz.filter(r=>
     (!state.dep||r.dep===state.dep)&&(!state.act||r.act===state.act)&&
@@ -788,14 +795,19 @@ function fdateR(v){
 
 /* ----- estado de los formularios ----- */
 const q1={act:'',sub:'',est:'',dep:'',prov:'',dist:''}, q2={dep:''};
+/* provincia y distrito cuelgan del departamento; la subactividad, de la actividad.
+   Sin el padre elegido la lista abarcaría todo el padrón, así que el campo se bloquea. */
 function q1Opts(){
-  const pool=repPool();
-  fill('#q1Sub','Todas las subactividades',
-    uniqSorted(pool.filter(r=>(!q1.act||r.act===q1.act)&&r.sub).map(r=>r.sub)));
-  fill('#q1Prov','Todas las provincias',
-    uniqSorted(pool.filter(r=>!q1.dep||r.dep===q1.dep).map(r=>norm(r.prov))));
-  fill('#q1Dist','Todos los distritos',
-    uniqSorted(pool.filter(r=>(!q1.dep||r.dep===q1.dep)&&(!q1.prov||norm(r.prov)===q1.prov)).map(r=>norm(r.dist))));
+  const pool=repPool(), enDep=r=>r.dep===q1.dep;
+  fillDep('#q1Sub',!!q1.act,'Todas las subactividades',
+    uniqSorted(pool.filter(r=>r.act===q1.act&&r.sub).map(r=>r.sub)),
+    'Elige una actividad primero','Esta actividad no tiene subactividades');
+  fillDep('#q1Prov',!!q1.dep,'Todas las provincias',
+    uniqSorted(pool.filter(enDep).map(r=>norm(r.prov))),
+    'Elige un departamento primero','Sin provincias registradas');
+  fillDep('#q1Dist',!!q1.dep,'Todos los distritos',
+    uniqSorted(pool.filter(r=>enDep(r)&&(!q1.prov||norm(r.prov)===q1.prov)).map(r=>norm(r.dist))),
+    'Elige un departamento primero','Sin distritos registrados');
   $('#q1Sub').value=q1.sub; $('#q1Prov').value=q1.prov; $('#q1Dist').value=q1.dist;
 }
 function rep1Rows(){
