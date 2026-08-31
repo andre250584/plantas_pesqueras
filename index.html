@@ -61,6 +61,7 @@ header.top{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom
   background-repeat:no-repeat;background-position:right 10px center}
 .reset{background:transparent;border:1px solid var(--line);color:var(--muted);border-radius:9px;
   padding:8px 13px;font-size:12.5px;cursor:pointer;font-weight:600;height:35px}
+.reset:disabled{opacity:.45;cursor:not-allowed}
 .scope{font-size:11.5px;color:var(--muted);margin:2px 0 16px}
 
 /* kpis */
@@ -174,6 +175,7 @@ footer{margin-top:34px;text-align:center;font-size:11.5px;color:var(--muted)}
     </div>
     <div class="spacer"></div>
     <button class="reset" id="refresh" title="Recargar datos desde Google Sheets">↻ Actualizar</button>
+    <button class="reset" id="dlMatriz" title="Descargar la hoja Matriz tal como se está usando" disabled>⤓ Excel</button>
     <div class="theme" id="theme">
       <button data-t="auto" class="on">Auto</button>
       <button data-t="light">Claro</button>
@@ -346,7 +348,7 @@ const SHEET_URLS={
   elim:'https://docs.google.com/spreadsheets/d/e/2PACX-1vTwsycwh1o8ehK9LZYv5-ATwblxYecUMmGNePnhHRHVHdCGjZOdFhYuWqr2suP10VLJ8pFo2Bi2nk5v/pub?gid=1522759277&single=true&output=csv'
 };
 const PAL=['#C8102E','#0E7490','#B45309','#15803D','#6D28D9','#475569','#0891B2','#BE185D','#65A30D','#7C3AED','#EA580C','#0369A1'];
-let RAW={matriz:[],elim:[],hist:[],otras:[]}, charts={}, state={dep:'',act:'',sub:'',est:'',q:''}, sortK=null, sortDir=1;
+let RAW={matriz:[],elim:[],hist:[],otras:[],matrizRaw:[]}, charts={}, state={dep:'',act:'',sub:'',est:'',q:''}, sortK=null, sortDir=1;
 
 /* ---------- theme ---------- */
 const mq=window.matchMedia('(prefers-color-scheme:dark)');
@@ -379,6 +381,7 @@ function handle(f){
 }
 function showApp(){
   drop.classList.add('hidden'); $('#app').classList.remove('hidden');
+  $('#dlMatriz').disabled=!RAW.matrizRaw.length;
   buildFilters(); renderAll(); fillTable(); buildRepFilters();
 }
 function dropState(mode,msg){
@@ -394,7 +397,8 @@ function rowsFromCsv(text){
 async function loadFromUrls(){
   const get=u=>fetch(u,{cache:'no-store'}).then(r=>{if(!r.ok)throw new Error('HTTP '+r.status);return r.text();});
   const [m,t,e]=await Promise.all([get(SHEET_URLS.matriz),get(SHEET_URLS.hist),get(SHEET_URLS.elim)]);
-  splitRegistry(parseRegistry(rowsFromCsv(m)));
+  RAW.matrizRaw=rowsFromCsv(m);
+  splitRegistry(parseRegistry(RAW.matrizRaw));
   RAW.elim=parseRegistry(rowsFromCsv(e));
   RAW.hist=parseHist(rowsFromCsv(t));
   if(!RAW.matriz.length) throw new Error('La hoja Matriz no devolvió datos');
@@ -484,7 +488,8 @@ function splitRegistry(all){
   RAW.otras =all.filter(r=> r.esOtra);
 }
 function parseWorkbook(wb){
-  splitRegistry(parseRegistry(findSheet(wb,'Matriz')));
+  RAW.matrizRaw=findSheet(wb,'Matriz')||[];
+  splitRegistry(parseRegistry(RAW.matrizRaw));
   RAW.elim=parseRegistry(findSheet(wb,'HISTORIAL ELIMINADAS'));
   RAW.hist=parseHist(findSheet(wb,'TENDENCIAS')) ;
   if(!RAW.hist.length) RAW.hist=parseHist(findSheet(wb,'RESUMEN'));
@@ -1030,6 +1035,19 @@ function saveBook(sheets,nombre){
   });
   XLSX.writeFile(wb,nombre);
 }
+/* volcado de la hoja Matriz tal como llega del origen: sin normalizar, con todas sus
+   columnas y su encabezado, para que el archivo sirva de respaldo recargable */
+function downloadMatriz(){
+  const rows=RAW.matrizRaw;
+  if(!rows||!rows.length) return;
+  const w=[];
+  rows.forEach(r=>(r||[]).forEach((v,i)=>{
+    const n=v instanceof Date?12:(v==null?0:String(v).length);
+    w[i]=Math.max(w[i]||0,n);
+  }));
+  saveBook([{name:'Matriz',aoa:rows,cols:w.map(n=>({wch:Math.min(Math.max(n+2,8),52)}))}],
+    `Matriz_origen_${fileStamp()}.xlsx`);
+}
 function rep1Xlsx(){
   const groups=rep1Groups(); if(!groups.length) return;
   const NC=9, wide=r=>({s:{r,c:0},e:{r,c:NC-1}});
@@ -1115,6 +1133,7 @@ function autoLoad(){
   });
 }
 $('#refresh').onclick=autoLoad;
+$('#dlMatriz').onclick=downloadMatriz;
 autoLoad();
 </script>
 </body>

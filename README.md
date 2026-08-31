@@ -23,6 +23,7 @@ Lee tres hojas publicadas en la web desde Google Sheets en formato CSV:
 - **TENDENCIAS** — series históricas de capacidad.
 - **HISTORIAL ELIMINADAS** — licencias canceladas.
 Las URLs publicadas están configuradas dentro del archivo (constante `SHEET_URLS`). Al abrir la página descarga esas hojas automáticamente; el botón **↻ Actualizar** vuelve a leerlas sin recargar. Si la descarga falla, permite subir el Excel manualmente como respaldo.
+El botón **⤓ Excel** descarga la hoja **Matriz** tal como se está usando: sin normalizar, con todas sus columnas y su encabezado original, y siempre completa (no la afectan los filtros de la barra superior). El archivo resultante se puede volver a cargar en el propio tablero.
  
 > Los cambios que se hagan en la hoja de Google se reflejan en el tablero unos minutos después (tiempo que tarda Google en refrescar la versión publicada).
  
