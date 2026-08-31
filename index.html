@@ -806,6 +806,31 @@ function totalsByUnit(rows){
   rows.forEach(r=>{const u=unitOf(r)||'—'; t[u]=(t[u]||0)+(r.cap||0);});
   return t;
 }
+/* el reporte 1 se divide por actividad y subactividad: si el grupo tiene una sola
+   unidad, la sigla va en la cabecera de CAPACIDAD y no se repite en cada fila */
+function rep1Groups(){
+  const by=new Map();
+  rep1Rows().forEach(r=>{
+    const act=norm(r.act)||'SIN ACTIVIDAD', sub=norm(r.sub)||'', k=act+'|'+sub;
+    if(!by.has(k)) by.set(k,{act,sub,rows:[]});
+    by.get(k).rows.push(r);
+  });
+  return [...by.values()]
+    .sort((a,b)=>a.act.localeCompare(b.act)||a.sub.localeCompare(b.sub))
+    .map(g=>{
+      const tot=totalsByUnit(g.rows), us=Object.keys(tot);
+      return Object.assign(g,{tot,unit:us.length===1?us[0]:''});
+    });
+}
+const uShort=u=>U_SHORT[u]||u||'';
+const rep1Total=groups=>groups.reduce((t,g)=>{
+  Object.keys(g.tot).forEach(u=>t[u]=(t[u]||0)+g.tot[u]); return t;
+},{});
+function rep1SecTitle(g){
+  return 'ACTIVIDAD: '+g.act+(g.sub?'   ·   SUB ACTIVIDAD: '+g.sub:'')
+    +'   ·   '+fmt(g.rows.length)+' planta'+(g.rows.length===1?'':'s');
+}
+const rep1CapHead=g=>'CAPACIDAD'+(g.unit?' ('+uShort(g.unit)+')':'');
 function repCount(){
   const n=rep1Rows().length, el=$('#q1Count');
   el.innerHTML=`<b>${fmt(n)}</b> planta${n===1?'':'s'} en la consulta`;
@@ -895,29 +920,51 @@ const grayZeros=d=>{
 };
 
 function rep1Pdf(){
-  const rows=rep1Rows(); if(!rows.length) return;
+  const groups=rep1Groups(); if(!groups.length) return;
   const doc=pdfNew('landscape');
-  const tot=totalsByUnit(rows);
-  const foot=Object.keys(tot).sort().map(u=>[
-    {content:'TOTAL '+(U_SHORT[u]||u),colSpan:8,styles:{halign:'right'}},
-    {content:nf2(tot[u]),styles:{halign:'right'}}
-  ]);
-  doc.autoTable({
-    head:[['N°','RAZÓN SOCIAL','DEPARTAMENTO','PROVINCIA','DISTRITO','LICENCIA','RESOLUCIÓN','FECHA RES.','CAPACIDAD']],
-    body:rows.map((r,i)=>[i+1,r.razon,r.dep,norm(r.prov)||'—',norm(r.dist)||'—',r.est,r.res||'—',
-      fdateR(r.fec),nf2(r.cap)+' '+(U_SHORT[unitOf(r)]||'')]),
-    foot:foot, showFoot:'lastPage',
-    startY:76, margin:{top:76,left:30,right:30,bottom:34},
+  const drawn=new Set();
+  const onPage=()=>{
+    const p=doc.internal.getCurrentPageInfo().pageNumber;
+    if(drawn.has(p)) return; drawn.add(p);
+    pdfHead(doc,'PLANTAS DE PROCESAMIENTO DE RECURSOS HIDROBIOLÓGICOS',q1Desc());
+  };
+  const base={
+    margin:{top:76,left:30,right:30,bottom:34},
     styles:{font:'helvetica',fontSize:7.5,cellPadding:4,textColor:C_INK,lineColor:C_SUB,lineWidth:.4,overflow:'linebreak'},
     headStyles:{fillColor:C_RED,textColor:255,fontStyle:'bold',halign:'center',valign:'middle'},
     footStyles:{fillColor:C_TOT,textColor:C_RED,fontStyle:'bold'},
     alternateRowStyles:{fillColor:C_ALT},
     columnStyles:{0:{halign:'right',cellWidth:26},1:{cellWidth:170},8:{halign:'right',cellWidth:66}},
-    didDrawPage:()=>pdfHead(doc,'PLANTAS DE PROCESAMIENTO DE RECURSOS HIDROBIOLÓGICOS',q1Desc())
+    didDrawPage:onPage
+  };
+  groups.forEach((g,gi)=>{
+    const foot=Object.keys(g.tot).sort().map(u=>[
+      {content:'TOTAL'+(g.unit?'':' '+uShort(u)),colSpan:8,styles:{halign:'right'}},
+      {content:nf2(g.tot[u]),styles:{halign:'right'}}
+    ]);
+    doc.autoTable(Object.assign({},base,{
+      head:[
+        [{content:rep1SecTitle(g),colSpan:9,
+          styles:{fillColor:C_TOT,textColor:C_RED,halign:'left',fontStyle:'bold',fontSize:8.5,cellPadding:5}}],
+        ['N°','RAZÓN SOCIAL','DEPARTAMENTO','PROVINCIA','DISTRITO','LICENCIA','RESOLUCIÓN','FECHA RES.',rep1CapHead(g)]
+      ],
+      body:g.rows.map((r,i)=>[i+1,r.razon,r.dep,norm(r.prov)||'—',norm(r.dist)||'—',r.est,r.res||'—',
+        fdateR(r.fec),g.unit?nf2(r.cap):nf2(r.cap)+' '+uShort(unitOf(r))]),
+      foot,showFoot:'lastPage',
+      startY:gi===0?76:doc.lastAutoTable.finalY+18
+    }));
   });
-  const y=doc.lastAutoTable.finalY+14;
-  doc.setFont('helvetica','normal').setFontSize(7.5).setTextColor(...C_GRAY);
-  doc.text(Object.keys(tot).sort().map(u=>`${U_SHORT[u]||u} = ${U_LONG[u]||'sin unidad'}`).join('   ·   '),30,y);
+  const tot=rep1Total(groups);
+  doc.autoTable({
+    head:[[{content:'RESUMEN GENERAL DE CAPACIDAD INSTALADA',colSpan:2,styles:{halign:'left'}}]],
+    body:Object.keys(tot).sort().map(u=>[U_LONG[u]||'Sin unidad',nf2(tot[u])+' '+uShort(u)]),
+    startY:doc.lastAutoTable.finalY+22, margin:{top:76,left:30,right:30,bottom:34},
+    tableWidth:300,
+    styles:{font:'helvetica',fontSize:7.5,cellPadding:4,textColor:C_INK,lineColor:C_SUB,lineWidth:.4},
+    headStyles:{fillColor:C_RED,textColor:255,fontStyle:'bold'},
+    columnStyles:{1:{halign:'right',fontStyle:'bold'}},
+    didDrawPage:onPage
+  });
   pdfFoot(doc);
   doc.save(`Consulta_plantas_${fileStamp()}.pdf`);
 }
@@ -982,22 +1029,32 @@ function saveBook(sheets,nombre){
   XLSX.writeFile(wb,nombre);
 }
 function rep1Xlsx(){
-  const rows=rep1Rows(); if(!rows.length) return;
-  const tot=totalsByUnit(rows);
+  const groups=rep1Groups(); if(!groups.length) return;
+  const NC=9, wide=r=>({s:{r,c:0},e:{r,c:NC-1}});
   const aoa=[
     ['PLANTAS DE PROCESAMIENTO DE RECURSOS HIDROBIOLÓGICOS'],
     ['Criterios: '+q1Desc()],
     ['Fecha de emisión: '+stamp()],
-    [],
-    ['N°','RAZÓN SOCIAL','DEPARTAMENTO','PROVINCIA','DISTRITO','LICENCIA','RESOLUCIÓN','FECHA RES.','CAPACIDAD','UNIDAD']
+    []
   ];
-  rows.forEach((r,i)=>aoa.push([i+1,r.razon,r.dep,norm(r.prov)||'',norm(r.dist)||'',r.est,r.res||'',
-    fdateR(r.fec),r2(r.cap),U_SHORT[unitOf(r)]||'']));
-  aoa.push([]);
-  Object.keys(tot).sort().forEach(u=>aoa.push(['','','','','','','','TOTAL '+(U_SHORT[u]||u),r2(tot[u]),U_SHORT[u]||u]));
-  saveBook([{name:'Consulta',aoa,
-    cols:[{wch:5},{wch:52},{wch:15},{wch:16},{wch:18},{wch:12},{wch:34},{wch:12},{wch:12},{wch:12}],
-    merges:[0,1,2].map(r=>({s:{r,c:0},e:{r,c:9}}))
+  const merges=[0,1,2].map(wide);
+  groups.forEach(g=>{
+    merges.push(wide(aoa.length));
+    aoa.push([rep1SecTitle(g)]);
+    aoa.push(['N°','RAZÓN SOCIAL','DEPARTAMENTO','PROVINCIA','DISTRITO','LICENCIA','RESOLUCIÓN','FECHA RES.',rep1CapHead(g)]);
+    g.rows.forEach((r,i)=>aoa.push([i+1,r.razon,r.dep,norm(r.prov)||'',norm(r.dist)||'',r.est,r.res||'',
+      fdateR(r.fec),g.unit?r2(r.cap):nf2(r.cap)+' '+uShort(unitOf(r))]));
+    Object.keys(g.tot).sort().forEach(u=>
+      aoa.push(['','','','','','','','TOTAL'+(g.unit?'':' '+uShort(u)),r2(g.tot[u])]));
+    aoa.push([]);
+  });
+  const tot=rep1Total(groups);
+  merges.push(wide(aoa.length));
+  aoa.push(['RESUMEN GENERAL DE CAPACIDAD INSTALADA']);
+  aoa.push(['UNIDAD','CAPACIDAD TOTAL','SIGLA']);
+  Object.keys(tot).sort().forEach(u=>aoa.push([U_LONG[u]||'Sin unidad',r2(tot[u]),uShort(u)]));
+  saveBook([{name:'Consulta',aoa,merges,
+    cols:[{wch:5},{wch:52},{wch:15},{wch:16},{wch:18},{wch:12},{wch:34},{wch:12},{wch:16}]
   }],`Consulta_plantas_${fileStamp()}.xlsx`);
 }
 function rep2Xlsx(){
